@@ -1,6 +1,7 @@
 set(REACTOR_SRC EventLoop.cc
         Channel.cc
         EPoller.cc
-        utils/CurrentThread.cc)
+        ../utils/CurrentThread.cc
+        ../utils/Timestamp.cc)
 
 add_library(reactor ${REACTOR_SRC})

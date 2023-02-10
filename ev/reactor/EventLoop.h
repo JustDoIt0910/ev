@@ -27,8 +27,8 @@ namespace ev::reactor
         void wakeup();
         void runInLoop(Functor f);
         void queueInLoop(Functor f);
-        void assertInLoopThread();
-        bool isInLoopThread() const;
+        void assertInLoopThread() const;
+        [[nodiscard]] bool isInLoopThread() const;
 
     private:
         std::unique_ptr<EPoller> poller;

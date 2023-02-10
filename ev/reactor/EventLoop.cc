@@ -5,7 +5,7 @@
 #include "EventLoop.h"
 #include "EPoller.h"
 #include "Channel.h"
-#include "utils/CurrentThread.h"
+#include "../utils/CurrentThread.h"
 #include <sys/eventfd.h>
 
 namespace ev::reactor
@@ -70,7 +70,7 @@ namespace ev::reactor
 
     }
 
-    void EventLoop::assertInLoopThread()
+    void EventLoop::assertInLoopThread() const
     {
         if(!isInLoopThread())
             abort();
