@@ -84,6 +84,12 @@ namespace ev::reactor
 
     Channel::ChannelStatus Channel::status() const {return _status;}
 
+    void Channel::setStatus(ChannelStatus status) {_status = status;}
+
+    int Channel::getInterestEvents() const {return interestEvents;}
+
+    void Channel::setOccurredEvent(int occurred) {occurredEvents = occurred;}
+
     void Channel::handleEvent(Timestamp receiveTime)
     {
         std::shared_ptr<void> guard;

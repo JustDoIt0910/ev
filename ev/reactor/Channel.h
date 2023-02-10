@@ -43,6 +43,9 @@ namespace ev::reactor
 
         [[nodiscard]] int fd() const;
         [[nodiscard]] ChannelStatus status() const;
+        void setStatus(ChannelStatus status);
+        [[nodiscard]] int getInterestEvents() const;
+        void setOccurredEvent(int occurred);
 
     private:
         void update();
