@@ -93,4 +93,34 @@ namespace ev::reactor
             // TODO handle error
         }
     }
+
+    Timestamp EPoller::poll(int timeoutMs, ChannelList &activeChannels)
+    {
+        int eventNum = ::epoll_wait(epollFd, &events[0], static_cast<int>(events.size()), timeoutMs);
+        Timestamp returnTime = Timestamp::now();
+        if(eventNum > 0)
+        {
+            fillActiveChannels(eventNum, activeChannels);
+            //事件数组满了，进行扩容
+            if(static_cast<size_t>(eventNum) == events.size())
+                events.resize(2 * events.size());
+        }
+        else if(eventNum < 0)
+        {
+            // TODO handle error
+        }
+        return returnTime;
+    }
+
+    void EPoller::fillActiveChannels(int eventNum, ChannelList& activeChannels)
+    {
+        assert(static_cast<size_t>(eventNum) <= events.size());
+        for(int i = 0; i < eventNum; i++)
+        {
+            struct epoll_event event = events[i];
+            auto channel = static_cast<Channel*>(event.data.ptr);
+            channel->setOccurredEvent(static_cast<int>(event.events));
+            activeChannels.push_back(channel);
+        }
+    }
 }

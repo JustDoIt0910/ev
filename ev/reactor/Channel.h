@@ -46,6 +46,7 @@ namespace ev::reactor
         void setStatus(ChannelStatus status);
         [[nodiscard]] int getInterestEvents() const;
         void setOccurredEvent(int occurred);
+        [[nodiscard]] EventLoop* ownerLoop() const;
 
     private:
         void update();
@@ -54,7 +55,7 @@ namespace ev::reactor
         int _fd;
         int interestEvents;
         int occurredEvents;
-        EventLoop* ownerLoop;
+        EventLoop* _ownerLoop;
         bool tied;
         bool addedToLoop;
         bool eventHandling;

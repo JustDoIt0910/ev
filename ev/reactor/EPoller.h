@@ -5,6 +5,7 @@
 #ifndef EV_EPOLLER_H
 #define EV_EPOLLER_H
 #include "EventLoop.h"
+#include "../utils/Timestamp.h"
 #include <sys/epoll.h>
 #include <vector>
 #include <map>
@@ -20,16 +21,16 @@ namespace ev::reactor
         void removeChannel(Channel* channel);
 
         typedef std::vector<Channel*> ChannelList;
-        void poll(int timeoutMs, ChannelList& activeChannels);
+        Timestamp poll(int timeoutMs, ChannelList& activeChannels);
 
         bool hasChannel(Channel* channel);
 
         const static int InitEventListSize = 16;
         // 10s epoll_wait超时事件
-        const  static int EpollTimeoutMs = 1000 * 10;
+        const static int EpollTimeoutMs = 1000 * 10;
 
     private:
-        void fillActiveChannels(ChannelList& activeChannels);
+        void fillActiveChannels(int eventNum, ChannelList& activeChannels);
         void update(int op, Channel* channel) const;
 
         int epollFd;

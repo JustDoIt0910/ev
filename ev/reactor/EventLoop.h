@@ -7,6 +7,10 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <atomic>
+#include <mutex>
+
+namespace ev {class Timestamp;}
 
 namespace ev::reactor
 {
@@ -24,18 +28,31 @@ namespace ev::reactor
         void quit();
         void updateChannel(Channel* channel);
         void removeChannel(Channel* channel);
-        void wakeup();
+        void wakeup() const;
         void runInLoop(Functor f);
         void queueInLoop(Functor f);
         void assertInLoopThread() const;
         [[nodiscard]] bool isInLoopThread() const;
+        [[nodiscard]] bool hasChannel(Channel* channel) const;
 
     private:
+        void handleRead(Timestamp receiveTime) const;
+        void doPendingFunctors();
+
         std::unique_ptr<EPoller> poller;
         int wakeupFd;
         std::unique_ptr<Channel> wakeupChannel;
-        std::vector<Functor> taskQueue;
+        std::mutex mu; //保护taskQueue
+        typedef std::vector<Functor> TaskQueue;
+        TaskQueue taskQueue;
         const pid_t loopThread;
+        std::atomic_bool running;
+        bool eventHandling;
+        bool callingPendingFunctors;
+
+        typedef std::vector<Channel*> ChannelList;
+        ChannelList activeChannels;
+        Channel* currentActiveChannel;
     };
 }
 

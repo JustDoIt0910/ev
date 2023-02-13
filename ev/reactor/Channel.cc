@@ -8,7 +8,7 @@
 namespace ev::reactor
 {
     Channel::Channel(EventLoop* loop, int fd):
-        ownerLoop(loop),
+        _ownerLoop(loop),
         _fd(fd),
         interestEvents(NoneEvent),
         occurredEvents(NoneEvent),
@@ -21,6 +21,8 @@ namespace ev::reactor
     {
         assert(!addedToLoop);
         assert(!eventHandling);
+        if(_ownerLoop->isInLoopThread())
+            assert(!_ownerLoop->hasChannel(this));
     }
 
     void Channel::setReadCallback(ReadCallback cb) {readCallback = std::move(cb);}
@@ -65,13 +67,13 @@ namespace ev::reactor
     {
         assert(interestEvents == NoneEvent);
         addedToLoop = false;
-        ownerLoop->removeChannel(this);
+        _ownerLoop->removeChannel(this);
     }
 
     void Channel::update()
     {
         addedToLoop = true;
-        ownerLoop->updateChannel(this);
+        _ownerLoop->updateChannel(this);
     }
 
     void Channel::tie(const std::shared_ptr<void>& obj)
@@ -89,6 +91,8 @@ namespace ev::reactor
     int Channel::getInterestEvents() const {return interestEvents;}
 
     void Channel::setOccurredEvent(int occurred) {occurredEvents = occurred;}
+
+    EventLoop* Channel::ownerLoop() const {return _ownerLoop;}
 
     void Channel::handleEvent(Timestamp receiveTime)
     {
