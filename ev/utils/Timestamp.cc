@@ -8,20 +8,19 @@
 
 namespace ev
 {
-    Timestamp::Timestamp(int64_t time): microSecondsSinceEpoch(time) {}
+    Timestamp::Timestamp(int64_t microSecondsSinceEpoch):
+        _microSecondsSinceEpoch(microSecondsSinceEpoch) {}
 
-    Timestamp::Timestamp() : microSecondsSinceEpoch(0) {}
+    Timestamp::Timestamp():
+        _microSecondsSinceEpoch(0) {}
 
-    bool Timestamp::isValid() const
-    {
-        return microSecondsSinceEpoch > 0;
-    }
+    bool Timestamp::isValid() const {return _microSecondsSinceEpoch > 0;}
 
     void Timestamp::addTime(int value, Timestamp::TimeUnit unit)
     {
         struct tm _tm{};
         memset(&_tm, 0, sizeof(_tm));
-        time_t t = microSecondsSinceEpoch / microSecondsPerSecond;
+        time_t t = _microSecondsSinceEpoch / microSecondsPerSecond;
         localtime_r(&t, &_tm);
         switch (unit)
         {
@@ -45,13 +44,10 @@ namespace ev
                 break;
             default: break;
         }
-        microSecondsSinceEpoch = mktime(&_tm) * microSecondsPerSecond;
+        _microSecondsSinceEpoch = mktime(&_tm) * microSecondsPerSecond;
     }
 
-    void Timestamp::addMicroSeconds(int64_t ms)
-    {
-        microSecondsSinceEpoch += ms;
-    }
+    void Timestamp::addMicroSeconds(int64_t ms) {_microSecondsSinceEpoch += ms;}
 
     std::string Timestamp::toFormattedString() const
     {
@@ -61,7 +57,7 @@ namespace ev
         memset(buf, 0, sizeof(buf));
         struct tm _tm{};
         memset(&_tm, 0, sizeof(_tm));
-        time_t t = microSecondsSinceEpoch / microSecondsPerSecond;
+        time_t t = _microSecondsSinceEpoch / microSecondsPerSecond;
         localtime_r(&t, &_tm);
         sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
                 _tm.tm_year + 1900, _tm.tm_mon + 1, _tm.tm_mday, _tm.tm_hour, _tm.tm_min, _tm.tm_sec);
@@ -78,15 +74,23 @@ namespace ev
                 );
     }
 
-    Timestamp Timestamp::fromUnix(time_t time)
-    {
-        return Timestamp(static_cast<int64_t>(time) * microSecondsPerSecond);
-    }
+    Timestamp Timestamp::invalid() {return Timestamp{};}
 
-    time_t Timestamp::toUnix() const
-    {
-        return static_cast<time_t>(microSecondsSinceEpoch / microSecondsPerSecond);
-    }
+    uint64_t Timestamp::microSecondsSinceEpoch() const {return _microSecondsSinceEpoch;}
+
+    Timestamp Timestamp::fromUnix(time_t time)
+    {return {static_cast<int64_t>(time) * microSecondsPerSecond};}
+
+    time_t Timestamp::toUnix() const {return static_cast<time_t>(_microSecondsSinceEpoch / microSecondsPerSecond);}
+
+    bool Timestamp::operator<(const ev::Timestamp &rhs) const
+    {return _microSecondsSinceEpoch < rhs._microSecondsSinceEpoch;}
+
+    bool Timestamp::operator==(const Timestamp& rhs) const
+    {return _microSecondsSinceEpoch == rhs._microSecondsSinceEpoch;}
+
+    uint64_t Timestamp::operator-(const Timestamp& rhs) const
+    {return _microSecondsSinceEpoch - rhs._microSecondsSinceEpoch;}
 
     bool _isvalid_tm_field(time_t value, Timestamp::TimeUnit unit)
     {

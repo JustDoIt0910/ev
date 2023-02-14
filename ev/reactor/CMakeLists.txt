@@ -1,6 +1,8 @@
 set(REACTOR_SRC EventLoop.cc
         Channel.cc
         EPoller.cc
+        Timer.cc
+        TimerQueue.cc
         ../utils/CurrentThread.cc
         ../utils/Timestamp.cc)
 
