@@ -9,6 +9,7 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include "Timer.h"
 
 namespace ev {class Timestamp;}
 
@@ -16,6 +17,7 @@ namespace ev::reactor
 {
     class Channel;
     class EPoller;
+    class TimerQueue;
 
     class EventLoop
     {
@@ -31,6 +33,10 @@ namespace ev::reactor
         void wakeup() const;
         void runInLoop(Functor f);
         void queueInLoop(Functor f);
+        Timer::TimerId runAt(Timestamp when, Timer::TimerTask task);
+        Timer::TimerId runAfter(double delay, Timer::TimerTask task);
+        Timer::TimerId runEvery(double interval, Timer::TimerTask task);
+        void cancelTimer(Timer::TimerId id);
         void assertInLoopThread() const;
         [[nodiscard]] bool isInLoopThread() const;
         [[nodiscard]] bool hasChannel(Channel* channel) const;
@@ -39,17 +45,17 @@ namespace ev::reactor
         void handleRead(Timestamp receiveTime) const;
         void doPendingFunctors();
 
-        std::unique_ptr<EPoller> poller;
-        int wakeupFd;
-        std::unique_ptr<Channel> wakeupChannel;
-        std::mutex mu; //保护taskQueue
-        typedef std::vector<Functor> TaskQueue;
-        TaskQueue taskQueue;
         const pid_t loopThread;
+        int wakeupFd;
         std::atomic_bool running;
         bool eventHandling;
         bool callingPendingFunctors;
-
+        std::unique_ptr<Channel> wakeupChannel;
+        std::unique_ptr<EPoller> poller;
+        std::unique_ptr<TimerQueue> timerQueue;
+        std::mutex mu; //保护taskQueue
+        typedef std::vector<Functor> TaskQueue;
+        TaskQueue taskQueue;
         typedef std::vector<Channel*> ChannelList;
         ChannelList activeChannels;
         Channel* currentActiveChannel;

@@ -4,12 +4,14 @@
 
 #include "EventLoop.h"
 #include "EPoller.h"
+#include "TimerQueue.h"
 #include "Channel.h"
 #include "../utils/CurrentThread.h"
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <functional>
 #include <cassert>
+#include <iostream>
 
 using namespace std::placeholders;
 
@@ -28,10 +30,11 @@ namespace ev::reactor
     }
 
     EventLoop::EventLoop():
+        loopThread(currentTreadId()),
         wakeupFd(createEventFd()),
         wakeupChannel(new Channel(this, wakeupFd)),
         poller(new EPoller(this)),
-        loopThread(currentTreadId()),
+        timerQueue(new TimerQueue(this)),
         currentActiveChannel(nullptr),
         running(false),
         eventHandling(false),
@@ -41,7 +44,7 @@ namespace ev::reactor
             g_LoopInThisThread = this;
         else
             abort();
-        wakeupChannel->setReadCallback(std::bind(&EventLoop::handleRead, this, _1));
+        wakeupChannel->setReadCallback([this](Timestamp receiveTime){ handleRead(receiveTime); });
         wakeupChannel->enableReading();
     }
 
@@ -131,6 +134,25 @@ namespace ev::reactor
         if(!isInLoopThread() || callingPendingFunctors)
             wakeup();
     }
+
+    Timer::TimerId EventLoop::runAt(Timestamp when, Timer::TimerTask task)
+    {return timerQueue->addTimer(when, 0.0, std::move(task));}
+
+    Timer::TimerId EventLoop::runAfter(double delay, Timer::TimerTask task)
+    {
+        Timestamp when = Timestamp::now();
+        when.addMicroSeconds(static_cast<int64_t>(delay * Timestamp::microSecondsPerSecond));
+        return runAt(when, std::move(task));
+    }
+
+    Timer::TimerId EventLoop::runEvery(double interval, Timer::TimerTask task)
+    {
+        Timestamp when = Timestamp::now();
+        when.addMicroSeconds(static_cast<int64_t>(interval * Timestamp::microSecondsPerSecond));
+        return timerQueue->addTimer(when, interval, std::move(task));
+    }
+
+    void EventLoop::cancelTimer(Timer::TimerId id) {timerQueue->cancelTimer(id);}
 
     void EventLoop::assertInLoopThread() const
     {

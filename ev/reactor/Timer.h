@@ -17,14 +17,15 @@ namespace ev::reactor
         Timer(TimerTask task, Timestamp when, double interval);
         typedef uint64_t TimerId;
         [[nodiscard]] TimerId id() const;
+        [[nodiscard]] bool repeat() const;
         void run();
         Timestamp expiration();
-        void restart();
+        void restart(Timestamp now);
 
     private:
         Timestamp _expiration;
         double interval;
-        bool repeat;
+        bool _repeat;
         TimerTask task;
         TimerId _id;
 

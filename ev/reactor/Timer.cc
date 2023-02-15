@@ -12,7 +12,7 @@ namespace ev::reactor
         task(std::move(task)),
         _expiration(when),
         interval(interval),
-        repeat(interval > 0.0),
+        _repeat(interval > 0.0),
         _id(nextId++) {}
 
     void Timer::run() {task();}
@@ -21,13 +21,14 @@ namespace ev::reactor
 
     Timer::TimerId Timer::id() const {return _id;}
 
-    void Timer::restart()
+    bool Timer::repeat() const {return _repeat;}
+
+    void Timer::restart(Timestamp now)
     {
-        if(!repeat)
+        if(!_repeat)
             _expiration = Timestamp::invalid();
         else
         {
-            _expiration = Timestamp::now();
             auto ms = static_cast<int64_t>(interval * Timestamp::microSecondsPerSecond);
             _expiration.addMicroSeconds(ms);
         }
