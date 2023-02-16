@@ -6,12 +6,12 @@
 #include "EPoller.h"
 #include "TimerQueue.h"
 #include "Channel.h"
+#include "Event.h"
 #include "../utils/CurrentThread.h"
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <functional>
 #include <cassert>
-#include <iostream>
 
 using namespace std::placeholders;
 
@@ -153,6 +153,30 @@ namespace ev::reactor
     }
 
     void EventLoop::cancelTimer(Timer::TimerId id) {timerQueue->cancelTimer(id);}
+
+    void EventLoop::addEventListener(Event* event, EventListener listener)
+    {
+        runInLoop([this, event, &listener]{
+            if(eventListeners.find(event->name()) == eventListeners.end())
+                eventListeners[event->name()] = std::move(listener);
+            delete event;
+        });
+    }
+
+    void EventLoop::dispatchEvent(Event* event)
+    {
+        runInLoop([this, event]{
+            dispatchEventInLoop(event);
+            delete event;
+        });
+    }
+
+    void EventLoop::dispatchEventInLoop(Event *event)
+    {
+        assertInLoopThread();
+        if(eventListeners.find(event->name()) != eventListeners.end())
+            eventListeners[event->name()](event);
+    }
 
     void EventLoop::assertInLoopThread() const
     {
