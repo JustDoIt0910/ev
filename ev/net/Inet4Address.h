@@ -20,6 +20,8 @@ namespace ev::net
         std::string toIp();
         [[nodiscard]] uint16_t port() const;
         [[nodiscard]] sa_family_t family() const;
+        [[nodiscard]] const struct sockaddr* getSockAddr() const;
+        void setSockAddr(const struct sockaddr* addr);
         static bool resolve(std::string_view name, Inet4Address& address);
 
     private:

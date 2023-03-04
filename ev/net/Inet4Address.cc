@@ -6,6 +6,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <cassert>
+#include <netdb.h>
 #include "Endian.h"
 
 namespace ev::net
@@ -56,8 +57,37 @@ namespace ev::net
 
     sa_family_t Inet4Address::family() const {return addr_.sin_family;}
 
+    const struct sockaddr* Inet4Address::getSockAddr() const
+    {
+        return static_cast<const struct sockaddr*>(static_cast<const void*>(&addr_));
+    }
+
+    void Inet4Address::setSockAddr(const struct sockaddr* addr)
+    {
+        addr_ = *static_cast<const struct sockaddr_in*>(static_cast<const void*>(addr));
+    }
+
+    static __thread char resolveBuf[8192];
+
     bool Inet4Address::resolve(std::string_view name, Inet4Address& address)
     {
-        
+        struct hostent ent{};
+        struct hostent* res = nullptr;
+        int h_errorno = 0;
+        int ret = gethostbyname_r(name.data(), &ent, resolveBuf, sizeof(resolveBuf), &res, &h_errorno);
+        if(ret == 0 && res != nullptr)
+        {
+            assert(res->h_addrtype == AF_INET && res->h_length == 4);
+            address.addr_.sin_addr = *reinterpret_cast<struct in_addr*>(res->h_addr);
+        }
+        else
+        {
+            if(ret)
+            {
+                // TODO handle error
+            }
+            return false;
+        }
+        return true;
     }
 }

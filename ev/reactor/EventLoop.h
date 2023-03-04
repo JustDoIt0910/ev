@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <string>
 #include "Timer.h"
+#include "utils/noncopyable.h"
 
 namespace ev
 {
@@ -25,7 +26,7 @@ namespace ev::reactor
     class EPoller;
     class TimerQueue;
 
-    class EventLoop
+    class EventLoop : public noncopyable
     {
     public:
         typedef std::function<void()> Functor;
