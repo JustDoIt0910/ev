@@ -52,7 +52,7 @@ namespace ev::net
         bool disconnected() const;
 
         void send(const void* message, int len);
-        void send(Buffer* message);
+        void send(Buffer& message);
         void shutdown();
         void forceClose();
 
@@ -77,7 +77,8 @@ namespace ev::net
         void handleClose();
         void handleError();
 
-        void sendInLoop(const void* message, size_t len);
+        void sendInLoop(const void* data, size_t len);
+        void sendInLoop(const std::string& str);
         void shutdownInLoop();
         void forceCloseInLoop();
         void startReadInLoop();

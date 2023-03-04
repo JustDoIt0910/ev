@@ -42,6 +42,7 @@ namespace ev::net
         channel_->enableReading();
     }
 
+
     void TcpConnection::startRead() {loop_->runInLoop([this] () {this->startReadInLoop();});}
 
     void TcpConnection::stopRead() {loop_->runInLoop([this] () {this->stopReadInLoop();});}
@@ -62,9 +63,8 @@ namespace ev::net
 
     void TcpConnection::shutdown()
     {
-        if(state_ == Connected)
+        if(state_.exchange(Disconnecting) == Connected)
         {
-            setState(Disconnecting);
             loop_->runInLoop([guard = shared_from_this()] {
                 guard->shutdownInLoop();
             });
@@ -77,6 +77,99 @@ namespace ev::net
         assert(state_ == Disconnecting);
         if(!channel_->isWriting()) //channel_还在关注写事件，说明缓冲区数据还没发送完，不能关闭
             socket_.shutdownWrite();
+    }
+
+    void TcpConnection::forceClose()
+    {
+        if (state_.exchange(Disconnecting) != Disconnected)
+            loop_->queueInLoop([guard = shared_from_this()] () {
+                guard->forceCloseInLoop();
+            });
+    }
+
+    void TcpConnection::forceCloseInLoop()
+    {
+        loop_->assertInLoopThread();
+        if (state_ != Disconnected)
+            handleClose();
+    }
+
+    void TcpConnection::send(const void* data, int len)
+    {
+        Buffer buf;
+        buf.append(data, len);
+        send(buf);
+    }
+
+    void TcpConnection::send(Buffer& buf)
+    {
+        if (state_ == Connected)
+        {
+            if (loop_->isInLoopThread())
+            {
+                sendInLoop(buf.peek(), buf.readableBytes());
+                buf.retrieveAll();
+            }
+            else
+            {
+                loop_->queueInLoop([this, data = buf.retrieveAllAsString()] () {
+                    this->sendInLoop(data);
+                });
+            }
+        }
+    }
+
+    void TcpConnection::sendInLoop(const std::string& str) { sendInLoop(str.data(), str.size());}
+
+    void TcpConnection::sendInLoop(const void* data, size_t len)
+    {
+        loop_->assertInLoopThread();
+        ssize_t nwrote = 0;
+        size_t remaining = len;
+        bool faultError = false;
+        if (state_ == Disconnected)
+            return;
+        if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
+        {
+            nwrote = socket_.write(data, len);
+            if (nwrote >= 0)
+            {
+                remaining = len - nwrote;
+                if (remaining == 0 && writeCompleteCallback_)
+                    loop_->queueInLoop([guard = shared_from_this()] () {
+                        guard->writeCompleteCallback_(guard);
+                    });
+            }
+            else
+            {
+                nwrote = 0;
+                // EAGAIN 或者 EWOULDBLOCK 说明发送缓冲满了，应该重试
+                if (errno != EWOULDBLOCK && errno != EAGAIN)
+                {
+                    //对方已经关闭连接
+                    if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
+                    {
+                        faultError = true;
+                    }
+                }
+            }
+        }
+        assert(remaining <= len);
+        if (!faultError && remaining > 0)
+        {
+            size_t oldLen = outputBuffer_.readableBytes();
+            if (oldLen + remaining >= highWaterMark_
+                && oldLen < highWaterMark_
+                && highWaterMarkCallback_)
+            {
+                loop_->queueInLoop([guard = shared_from_this(), oldLen, remaining] () {
+                    guard->highWaterMarkCallback_(guard, oldLen + remaining);
+                });
+            }
+            outputBuffer_.append(static_cast<const char*>(data) +nwrote, remaining);
+            if (!channel_->isWriting())
+                channel_->enableWriting();
+        }
     }
 
     void TcpConnection::handleRead(Timestamp receiveTime)

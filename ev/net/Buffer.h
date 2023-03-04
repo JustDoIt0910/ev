@@ -18,6 +18,7 @@ namespace ev::net
         static const size_t InitialSize = 1024;
 
         explicit Buffer(size_t initialSize = InitialSize);
+        Buffer(Buffer&& buffer) noexcept;
 
         void swap(Buffer& rhs);
         [[nodiscard]] size_t readableBytes() const;

@@ -14,6 +14,7 @@ namespace ev::net
     public:
         explicit Socket(sa_family_t family);
         explicit Socket(int sockFd);
+        Socket();
         Socket(Socket&& socket) noexcept;
         Socket& operator=(Socket&& socket) noexcept;
         ~Socket();
@@ -24,8 +25,9 @@ namespace ev::net
         void bind(const Inet4Address& addr) const;
         void listen() const;
         Socket accept(Inet4Address& addr) const;
-        ssize_t write(const char* data, size_t len) const;
+        ssize_t write(const void* data, size_t len) const;
         void shutdownWrite() const;
+        void close();
         [[nodiscard]] int connect(const Inet4Address& serverAddr) const;
         [[nodiscard]] int fd() const;
         [[nodiscard]] int error() const;

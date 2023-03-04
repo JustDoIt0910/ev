@@ -17,6 +17,10 @@ namespace ev::net
         assert(prependableBytes() == CheapPrepend);
     }
 
+    Buffer::Buffer(Buffer&& buffer) noexcept
+        :readerIndex_(CheapPrepend),
+        writerIndex_(CheapPrepend) { swap(buffer); }
+
     void Buffer::swap(Buffer& rhs)
     {
         buffer_.swap(rhs.buffer_);

@@ -18,6 +18,8 @@ namespace ev::net
 
     Socket::Socket(int sockFd): fd_(sockFd) {}
 
+    Socket::Socket(): Socket(-1) {}
+
     Socket::Socket(Socket&& socket) noexcept
     {
         fd_ = socket.fd();
@@ -26,6 +28,8 @@ namespace ev::net
 
     Socket& Socket::operator=(Socket&& socket) noexcept
     {
+        if(fd_ >= 0)
+            ::close(fd_);
         fd_ = socket.fd();
         socket.fd_ = -1;
         return *this;
@@ -122,7 +126,7 @@ namespace ev::net
                          static_cast<socklen_t>(sizeof(struct sockaddr)));
     }
 
-    ssize_t Socket::write(const char* data, size_t len) const {return ::write(fd_, data, len);}
+    ssize_t Socket::write(const void* data, size_t len) const {return ::write(fd_, data, len);}
 
     int Socket::fd() const {return fd_;}
 
@@ -140,5 +144,12 @@ namespace ev::net
         {
             // TODO handle error
         }
+    }
+
+    void Socket::close()
+    {
+        if(fd_ >= 0)
+            ::close(fd_);
+        fd_ = -1;
     }
 }
