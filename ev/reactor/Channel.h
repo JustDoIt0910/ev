@@ -37,6 +37,9 @@ namespace ev::reactor
         void disableWriting();
         void disableAll();
 
+        [[nodiscard]] bool isReading() const;
+        [[nodiscard]] bool isWriting() const;
+
         void remove();
         void tie(const std::shared_ptr<void>& obj);
         void handleEvent(Timestamp receiveTime);
