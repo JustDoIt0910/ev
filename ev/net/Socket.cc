@@ -130,6 +130,32 @@ namespace ev::net
 
     int Socket::fd() const {return fd_;}
 
+    Inet4Address Socket::localAddress() const
+    {
+        struct sockaddr_in localAddr{};
+        socklen_t len = static_cast<socklen_t>(sizeof(localAddr));
+        bzero(&localAddr, len);
+        if(::getsockname(fd_,static_cast<struct sockaddr*>(static_cast<void*>(&localAddr)),
+                &len) < 0)
+        {
+            // TODO handle error
+        }
+        return Inet4Address(localAddr);
+    }
+
+    Inet4Address Socket::peerAddress() const
+    {
+        struct sockaddr_in peerAddr{};
+        socklen_t len = static_cast<socklen_t>(sizeof(peerAddr));
+        bzero(&peerAddr, len);
+        if(::getpeername(fd_,static_cast<struct sockaddr*>(static_cast<void*>(&peerAddr)),
+                         &len) < 0)
+        {
+            // TODO handle error
+        }
+        return Inet4Address(peerAddr);
+    }
+
     int Socket::error() const
     {
         int opt;

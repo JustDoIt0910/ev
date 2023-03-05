@@ -12,11 +12,10 @@ namespace ev::net
 {
     const size_t TcpConnection::DefaultHighWaterMark = 64 * 1024 * 1024; // 64MB 高水位标志
 
-    TcpConnection::TcpConnection(reactor::EventLoop *loop, std::string name, Socket &&socket,
+    TcpConnection::TcpConnection(reactor::EventLoop *loop, Socket &&socket,
                                  const ev::net::Inet4Address &localAddr,
                                  const ev::net::Inet4Address &peerAddr):
         loop_(loop),
-        name_(std::move(name)),
         state_(Connecting),
         socket_(std::move(socket)),
         channel_(new reactor::Channel(loop, socket_.fd())),
@@ -31,17 +30,18 @@ namespace ev::net
         socket_.setKeepAlive(true);
     }
 
+    TcpConnection::~TcpConnection() { assert(state_.load() == Disconnected);}
+
     void TcpConnection::connectEstablished()
     {
         loop_->assertInLoopThread();
-        assert(state_ == Connecting);
+        assert(state_.load() == Connecting);
         setState(Connected);
         channel_->tie(shared_from_this());
         if(connectionCallback_)
             connectionCallback_(shared_from_this());
         channel_->enableReading();
     }
-
 
     void TcpConnection::startRead() {loop_->runInLoop([this] () {this->startReadInLoop();});}
 
@@ -74,7 +74,7 @@ namespace ev::net
     void TcpConnection::shutdownInLoop()
     {
         loop_->assertInLoopThread();
-        assert(state_ == Disconnecting);
+        assert(state_.load() == Disconnecting);
         if(!channel_->isWriting()) //channel_还在关注写事件，说明缓冲区数据还没发送完，不能关闭
             socket_.shutdownWrite();
     }
@@ -90,7 +90,7 @@ namespace ev::net
     void TcpConnection::forceCloseInLoop()
     {
         loop_->assertInLoopThread();
-        if (state_ != Disconnected)
+        if (state_.load() != Disconnected)
             handleClose();
     }
 
@@ -103,7 +103,7 @@ namespace ev::net
 
     void TcpConnection::send(Buffer& buf)
     {
-        if (state_ == Connected)
+        if (state_.load() == Connected)
         {
             if (loop_->isInLoopThread())
             {
@@ -112,8 +112,9 @@ namespace ev::net
             }
             else
             {
-                loop_->queueInLoop([this, data = buf.retrieveAllAsString()] () {
-                    this->sendInLoop(data);
+                loop_->queueInLoop([guard = shared_from_this(),
+                                    data = buf.retrieveAllAsString()] () {
+                    guard->sendInLoop(data);
                 });
             }
         }
@@ -124,11 +125,11 @@ namespace ev::net
     void TcpConnection::sendInLoop(const void* data, size_t len)
     {
         loop_->assertInLoopThread();
+        if (state_.load() != Connected)
+            return;
         ssize_t nwrote = 0;
         size_t remaining = len;
         bool faultError = false;
-        if (state_ == Disconnected)
-            return;
         if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
         {
             nwrote = socket_.write(data, len);
@@ -206,7 +207,7 @@ namespace ev::net
                             guard->writeCompleteCallback_(guard);
                         });
                     //之前调用过shutdown()但因为数据没发送完而没有执行，现在要再次shutdown
-                    if (state_ == Disconnecting)
+                    if (state_.load() == Disconnecting)
                         shutdownInLoop();
                 }
             }
@@ -220,7 +221,7 @@ namespace ev::net
     void TcpConnection::handleClose()
     {
         loop_->assertInLoopThread();
-        assert(state_ == Connected || state_ == Disconnecting);
+        assert(state_.load() == Connected || state_.load() == Disconnecting);
         setState(Disconnected);
         channel_->disableAll();
         channel_->remove();
@@ -250,17 +251,15 @@ namespace ev::net
 
     reactor::EventLoop* TcpConnection::getLoop() const { return loop_; }
 
-    const std::string& TcpConnection::name() const { return name_; }
-
     const Inet4Address& TcpConnection::localAddress() const { return localAddr_; }
 
     const Inet4Address& TcpConnection::peerAddress() const { return peerAddr_; }
 
-    bool TcpConnection::connected() const { return state_ == Connected; }
+    bool TcpConnection::connected() const { return state_.load() == Connected; }
 
-    bool TcpConnection::disconnected() const { return state_ == Disconnected; }
+    bool TcpConnection::disconnected() const { return state_.load() == Disconnected; }
 
-    void  TcpConnection::setState(StateE s) { state_ = s; }
+    void  TcpConnection::setState(StateE s) { state_.store(s); }
 
     void TcpConnection::setTcpNoDelay(bool enable) { socket_.setTcpNoDelay(enable); }
 }

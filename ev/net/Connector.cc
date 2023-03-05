@@ -6,7 +6,6 @@
 #include <memory>
 #include "reactor/Channel.h"
 #include "reactor/EventLoop.h"
-#include <iostream>
 
 namespace ev::net
 {
@@ -39,7 +38,7 @@ namespace ev::net
     void Connector::stopInLoop()
     {
         loop_->assertInLoopThread();
-        if(state_ == Connecting)
+        if(state_.load() == Connecting)
         {
             channel_->disableAll();
             channel_->remove();
@@ -52,7 +51,7 @@ namespace ev::net
     void Connector::startInLoop()
     {
         loop_->assertInLoopThread();
-        if(started_ && state_ == Disconnected)
+        if(started_ && state_.load() == Disconnected)
             connect();
     }
 
@@ -96,7 +95,7 @@ namespace ev::net
 
     void Connector::handleWrite()
     {
-        if(state_ == Connecting)
+        if(state_.load() == Connecting)
         {
             channel_->disableAll();
             channel_->remove();
@@ -116,7 +115,7 @@ namespace ev::net
 
     void Connector::handleError()
     {
-        if(state_ == Connecting)
+        if(state_.load() == Connecting)
         {
             channel_->disableAll();
             channel_->remove();
@@ -126,7 +125,6 @@ namespace ev::net
 
     void Connector::retry()
     {
-        std::cout << "retrying..." << std::endl;
         setState(Disconnected);
         if (started_)
         {
@@ -138,7 +136,7 @@ namespace ev::net
         }
     }
 
-    void Connector::setState(StateE s) { state_ = s; }
+    void Connector::setState(StateE s) { state_.store(s); }
 
     void Connector::setNewConnectionCallback(const NewConnectionCallback& cb) { newConnectionCallback_ = cb; }
 

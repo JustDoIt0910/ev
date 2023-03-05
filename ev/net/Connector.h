@@ -11,6 +11,7 @@
 #include "Socket.h"
 #include "reactor/Timer.h"
 #include "utils/noncopyable.h"
+#include "Types.h"
 
 namespace ev::reactor
 {
@@ -26,8 +27,6 @@ namespace ev::net
                       public std::enable_shared_from_this<Connector>
     {
     public:
-        typedef std::function<void (Socket socket)> NewConnectionCallback;
-
         Connector(reactor::EventLoop* loop, const Inet4Address& serverAddr);
         ~Connector();
         void setNewConnectionCallback(const NewConnectionCallback& cb);

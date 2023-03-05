@@ -1,9 +1,10 @@
 //
 // Created by zr on 23-3-5.
 //
-#include "net/Connector.h"
+#include "net/TcpClient.h"
+#include "utils/Timestamp.h"
 #include "reactor/EventLoop.h"
-#include <memory>
+#include "net/TcpConnection.h"
 #include <iostream>
 
 using namespace ev::reactor;
@@ -12,13 +13,22 @@ using namespace ev::net;
 int main()
 {
     EventLoop loop;
-    Socket socket;
-    std::shared_ptr<Connector> connector(new Connector(&loop, Inet4Address("127.0.0.1", 9999)));
-    connector->setNewConnectionCallback([&socket](Socket s) {
-        socket = std::move(s);
-        std::cout << "connected" <<std::endl;
+    TcpClient* client = new TcpClient(&loop, Inet4Address("127.0.0.1", 9999));
+    client->setConnectionCallback([] (const TcpConnectionPtr& conn) {
+        if(conn->connected())
+        {
+            std::cout << "connected" << std::endl;
+            conn->send("hello", 5);
+        }
+        else
+            std::cout << "disconnected" << std::endl;
+
     });
-    connector->start();
+    client->setMessageCallback([] (const TcpConnectionPtr&, Buffer* buf, ev::Timestamp) {
+        std::cout << buf->retrieveAllAsString() << std::endl;
+    });
+    client->connect();
+    loop.runAfter(3.0, [client] () {delete client;});
     loop.loop();
     return 0;
 }

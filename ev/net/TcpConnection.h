@@ -13,12 +13,10 @@
 #include "Socket.h"
 #include "utils/noncopyable.h"
 #include "utils/Timestamp.h"
+#include "reactor/Channel.h"
+#include "Types.h"
 
-namespace ev::reactor
-{
-    class Channel;
-    class EventLoop;
-}
+namespace ev::reactor { class EventLoop; }
 
 namespace ev::net
 {
@@ -26,26 +24,15 @@ namespace ev::net
                           public std::enable_shared_from_this<TcpConnection>
     {
     public:
-        typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
-        typedef std::function<void (const TcpConnectionPtr&)> ConnectionCallback;
-        typedef std::function<void (const TcpConnectionPtr&)> CloseCallback;
-        typedef std::function<void (const TcpConnectionPtr&)> WriteCompleteCallback;
-        typedef std::function<void (const TcpConnectionPtr&, size_t)> HighWaterMarkCallback;
-        typedef std::function<void (const TcpConnectionPtr&,
-                                    Buffer*,
-                                    Timestamp)> MessageCallback;
-
         const static size_t DefaultHighWaterMark;
 
         TcpConnection(reactor::EventLoop* loop,
-                      std::string name,
                       Socket&& socket,
                       const Inet4Address& localAddr,
                       const Inet4Address& peerAddr);
-        ~TcpConnection() = default;
+        ~TcpConnection();
 
         reactor::EventLoop* getLoop() const;
-        const std::string& name() const;
         const Inet4Address& localAddress() const;
         const Inet4Address& peerAddress() const;
         bool connected() const;
@@ -85,7 +72,6 @@ namespace ev::net
         void stopReadInLoop();
 
         reactor::EventLoop* loop_;
-        const std::string name_;
         std::atomic<StateE> state_;
         Socket socket_;
         std::unique_ptr<reactor::Channel> channel_;
