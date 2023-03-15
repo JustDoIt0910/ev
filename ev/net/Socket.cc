@@ -67,6 +67,7 @@ namespace ev::net
         if(::setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY,
                         &opt, static_cast<socklen_t>(sizeof(opt))) < 0)
         {
+            int a;
             // TODO handle error
         }
     }
@@ -129,6 +130,8 @@ namespace ev::net
     ssize_t Socket::write(const void* data, size_t len) const {return ::write(fd_, data, len);}
 
     int Socket::fd() const {return fd_;}
+
+    bool Socket::isValid() const {return fd_ >= 0;}
 
     Inet4Address Socket::localAddress() const
     {

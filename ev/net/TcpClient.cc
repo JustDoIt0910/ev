@@ -31,6 +31,7 @@ namespace ev::net
         {
             loop_->runInLoop([this, &conn] () {
                 conn->setCloseCallback([] (const TcpConnectionPtr& conn) {});
+                conn->setConnectionCallback([] (const TcpConnectionPtr& conn) {});
                 latch_.countDown();
             });
         }
@@ -100,6 +101,7 @@ namespace ev::net
             std::lock_guard<std::mutex> lg(mu);
             connection_ = conn;
         }
+        conn->setTcpNoDelay(true);
         conn->connectEstablished();
     }
 

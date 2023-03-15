@@ -4,6 +4,7 @@
 
 #ifndef EV_EVENTLOOP_H
 #define EV_EVENTLOOP_H
+#include "utils/noncopyable.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -12,7 +13,7 @@
 #include <unordered_map>
 #include <string>
 #include "Timer.h"
-#include "utils/noncopyable.h"
+
 
 namespace ev
 {

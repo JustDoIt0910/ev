@@ -5,7 +5,7 @@
 #ifndef EV_CHANNEL_H
 #define EV_CHANNEL_H
 #include "EventLoop.h"
-#include "../utils/Timestamp.h"
+#include "utils/Timestamp.h"
 #include <sys/epoll.h>
 
 namespace ev::reactor
